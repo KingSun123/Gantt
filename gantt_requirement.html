@@ -1,0 +1,1367 @@
+<!DOCTYPE html>  
+<html lang="zh-Hant">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
+  <title>Warehouse Ops Gantt - 倉庫營運排程系統</title>  
+  <style>  
+    :root{  
+      --bg:#0a1220;  
+      --panel:#111a2b;  
+      --panel2:#162237;  
+      --panel3:#0e1727;  
+      --line:#293650;  
+      --text:#e8eefc;  
+      --sub:#96a8c8;  
+      --blue:#49a3ff;  
+      --blue2:#236dff;  
+      --green:#27c36f;  
+      --orange:#ffb020;  
+      --red:#ff5c70;  
+      --purple:#a56eff;  
+      --gray:#7c8da8;  
+      --shadow:0 10px 28px rgba(0,0,0,.28);  
+  
+      --task-col:240px;  
+      --area-col:120px;  
+      --owner-col:120px;  
+      --shift-col:90px;  
+      --cell-width:42px;  
+      --row-height:58px;  
+    }  
+  
+    *{box-sizing:border-box}  
+    body{  
+      margin:0;  
+      font-family:"Segoe UI","Microsoft JhengHei",sans-serif;  
+      background:  
+        radial-gradient(circle at top right, rgba(73,163,255,.10), transparent 20%),  
+        radial-gradient(circle at top left, rgba(165,110,255,.08), transparent 18%),  
+        linear-gradient(135deg,#0a1220 0%,#0d1728 45%,#09111d 100%);  
+      color:var(--text);  
+    }  
+  
+    .container{  
+      max-width:1700px;  
+      margin:0 auto;  
+      padding:18px;  
+    }  
+  
+    .hero,.section{  
+      background:rgba(17,26,43,.96);  
+      border:1px solid rgba(255,255,255,.06);  
+      border-radius:18px;  
+      box-shadow:var(--shadow);  
+      margin-bottom:18px;  
+    }  
+  
+    .hero{  
+      padding:22px 24px;  
+      background:  
+        radial-gradient(circle at right top, rgba(73,163,255,.16), transparent 24%),  
+        linear-gradient(135deg, rgba(73,163,255,.08), rgba(165,110,255,.05));  
+    }  
+  
+    .hero-row{  
+      display:flex;  
+      justify-content:space-between;  
+      gap:14px;  
+      flex-wrap:wrap;  
+      align-items:flex-start;  
+    }  
+  
+    .hero h1{  
+      margin:0 0 8px;  
+      font-size:30px;  
+    }  
+  
+    .hero p{  
+      margin:0;  
+      color:var(--sub);  
+      line-height:1.7;  
+    }  
+  
+    .pill{  
+      padding:10px 14px;  
+      border-radius:999px;  
+      background:rgba(73,163,255,.10);  
+      border:1px solid rgba(73,163,255,.18);  
+      color:#bfe1ff;  
+      font-size:13px;  
+      white-space:nowrap;  
+    }  
+  
+    .section{padding:18px}  
+    h2{  
+      margin:0 0 14px;  
+      font-size:20px;  
+    }  
+  
+    .form-grid{  
+      display:grid;  
+      grid-template-columns:repeat(10,minmax(100px,1fr));  
+      gap:12px;  
+    }  
+  
+    .filter-grid{  
+      display:grid;  
+      grid-template-columns:2fr repeat(5,1fr);  
+      gap:12px;  
+    }  
+  
+    .toolbar-row{  
+      display:flex;  
+      gap:10px;  
+      flex-wrap:wrap;  
+      align-items:center;  
+      margin-top:12px;  
+    }  
+  
+    label{  
+      display:block;  
+      font-size:12px;  
+      color:var(--sub);  
+      margin-bottom:6px;  
+    }  
+  
+    input,select,textarea{  
+      width:100%;  
+      background:#0f1728;  
+      border:1px solid var(--line);  
+      color:var(--text);  
+      padding:10px 12px;  
+      border-radius:10px;  
+      outline:none;  
+    }  
+  
+    input:focus,select:focus,textarea:focus{  
+      border-color:var(--blue);  
+      box-shadow:0 0 0 3px rgba(73,163,255,.12);  
+    }  
+  
+    button{  
+      border:none;  
+      border-radius:10px;  
+      padding:10px 14px;  
+      color:#fff;  
+      cursor:pointer;  
+      font-weight:700;  
+      transition:.2s ease;  
+    }  
+  
+    button:hover{transform:translateY(-1px);opacity:.97}  
+    .btn-primary{background:linear-gradient(90deg,var(--blue),var(--blue2))}  
+    .btn-success{background:linear-gradient(90deg,#27c36f,#139957)}  
+    .btn-warning{background:linear-gradient(90deg,#ffb020,#ff8c00)}  
+    .btn-danger{background:linear-gradient(90deg,#ff5c70,#d92742)}  
+    .btn-purple{background:linear-gradient(90deg,#a56eff,#6f42ff)}  
+    .btn-gray{background:linear-gradient(90deg,#697a96,#4b5971)}  
+  
+    .status-inline{  
+      margin-left:auto;  
+      color:#9fd7ff;  
+      font-size:13px;  
+      padding:8px 12px;  
+      background:rgba(73,163,255,.08);  
+      border:1px solid rgba(73,163,255,.12);  
+      border-radius:10px;  
+    }  
+  
+    .small-note{  
+      margin-top:10px;  
+      color:var(--sub);  
+      font-size:12px;  
+    }  
+  
+    .summary{  
+      display:flex;  
+      flex-wrap:wrap;  
+      gap:10px;  
+      margin-top:14px;  
+    }  
+  
+    .summary .box{  
+      background:#152137;  
+      border:1px solid var(--line);  
+      padding:10px 14px;  
+      border-radius:12px;  
+      color:#d9e5fb;  
+      font-size:13px;  
+    }  
+  
+    .chips{  
+      display:flex;  
+      gap:8px;  
+      flex-wrap:wrap;  
+    }  
+  
+    .chip{  
+      padding:7px 12px;  
+      border-radius:999px;  
+      border:1px solid var(--line);  
+      background:#10182a;  
+      color:#cdd8ef;  
+      cursor:pointer;  
+      font-size:13px;  
+    }  
+  
+    .chip.active{  
+      background:rgba(73,163,255,.16);  
+      border-color:rgba(73,163,255,.30);  
+      color:#d7ecff;  
+    }  
+  
+    .table-wrap,.gantt-wrap{overflow:auto}  
+  
+    table{  
+      width:100%;  
+      border-collapse:collapse;  
+    }  
+  
+    th,td{  
+      border:1px solid var(--line);  
+      padding:10px;  
+      text-align:left;  
+      vertical-align:middle;  
+      background:#10192c;  
+      font-size:13px;  
+    }  
+  
+    th{  
+      background:#1a2740;  
+      color:#fff;  
+      position:sticky;  
+      top:0;  
+      z-index:2;  
+    }  
+  
+    td input, td select{min-width:90px}  
+  
+    .empty{  
+      color:var(--sub);  
+      text-align:center;  
+      padding:24px;  
+      border:1px dashed var(--line);  
+      border-radius:12px;  
+      background:#10182a;  
+    }  
+  
+    .badge{  
+      display:inline-block;  
+      padding:4px 8px;  
+      border-radius:999px;  
+      font-size:12px;  
+      font-weight:700;  
+    }  
+  
+    .b-pending{background:rgba(73,163,255,.18);color:#91caff}  
+    .b-doing{background:rgba(255,176,32,.18);color:#ffd27b}  
+    .b-done{background:rgba(39,195,111,.18);color:#7ff0b1}  
+    .b-delay{background:rgba(255,92,112,.18);color:#ff9aa7}  
+    .b-issue{background:rgba(165,110,255,.18);color:#cfb0ff}  
+    .b-mile{background:rgba(200,200,255,.16);color:#f0f3ff}  
+  
+    .p-high{color:#ff8fa0;font-weight:700}  
+    .p-medium{color:#ffd27b;font-weight:700}  
+    .p-low{color:#8dd0ff;font-weight:700}  
+  
+    .legend{  
+      display:flex;  
+      flex-wrap:wrap;  
+      gap:12px;  
+      margin-top:12px;  
+      color:var(--sub);  
+      font-size:13px;  
+    }  
+  
+    .legend span{  
+      display:inline-flex;  
+      align-items:center;  
+      gap:6px;  
+    }  
+  
+    .dot{  
+      width:14px;  
+      height:14px;  
+      border-radius:4px;  
+      display:inline-block;  
+    }  
+  
+    .dot.pending{background:#49a3ff}  
+    .dot.doing{background:#ffb020}  
+    .dot.done{background:#27c36f}  
+    .dot.delay{background:#ff5c70}  
+    .dot.issue{background:#a56eff}  
+    .dot.mile{background:#d7e2ff; transform:rotate(45deg); border-radius:2px}  
+  
+    .gantt-wrap{  
+      border:1px solid var(--line);  
+      border-radius:14px;  
+      background:#0f1728;  
+    }  
+  
+    .gantt{  
+      min-width:1200px;  
+      position:relative;  
+    }  
+  
+    .gantt-header,.gantt-row{  
+      display:grid;  
+      align-items:center;  
+      border-bottom:1px solid var(--line);  
+      position:relative;  
+    }  
+  
+    .gantt-header{  
+      position:sticky;  
+      top:0;  
+      z-index:10;  
+      background:#1a2740;  
+      font-weight:700;  
+    }  
+  
+    .gantt-cell{  
+      border-right:1px solid var(--line);  
+      min-height:var(--row-height);  
+      display:flex;  
+      align-items:center;  
+      justify-content:center;  
+      padding:8px;  
+      font-size:12px;  
+      position:relative;  
+      text-align:center;  
+    }  
+  
+    .sticky-left{  
+      position:sticky;  
+      left:0;  
+      z-index:8;  
+      background:#162238;  
+      justify-content:flex-start;  
+      padding-left:12px;  
+      text-align:left;  
+      font-weight:700;  
+    }  
+  
+    .sticky-left.area{  
+      left:var(--task-col);  
+      z-index:8;  
+      background:#142033;  
+      color:#c7d5ef;  
+      font-weight:600;  
+    }  
+  
+    .sticky-left.owner{  
+      left:calc(var(--task-col) + var(--area-col));  
+      z-index:8;  
+      background:#132033;  
+      color:#c7d5ef;  
+      font-weight:500;  
+    }  
+  
+    .sticky-left.shift{  
+      left:calc(var(--task-col) + var(--area-col) + var(--owner-col));  
+      z-index:8;  
+      background:#122033;  
+      color:#b9cae7;  
+      font-weight:500;  
+    }  
+  
+    .timeline-row{  
+      grid-column:5 / -1;  
+      position:relative;  
+      min-height:var(--row-height);  
+      background:  
+        repeating-linear-gradient(  
+          to right,  
+          rgba(255,255,255,.03) 0,  
+          rgba(255,255,255,.03) 1px,  
+          transparent 1px,  
+          transparent var(--cell-width)  
+        );  
+    }  
+  
+    .today-line{  
+      position:absolute;  
+      top:0;  
+      bottom:0;  
+      width:2px;  
+      background:rgba(255,255,255,.42);  
+      z-index:2;  
+      pointer-events:none;  
+    }  
+  
+    .bar-track{  
+      position:absolute;  
+      height:28px;  
+      top:15px;  
+      border-radius:999px;  
+      overflow:hidden;  
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);  
+      cursor:grab;  
+      z-index:4;  
+      user-select:none;  
+      touch-action:none;  
+    }  
+  
+    .bar-track.dragging,.milestone.dragging{  
+      cursor:grabbing;  
+      opacity:.92;  
+      box-shadow:0 0 0 2px rgba(255,255,255,.16),0 0 18px rgba(73,163,255,.25);  
+    }  
+  
+    .status-pending{background:linear-gradient(90deg,#49a3ff,#236dff)}  
+    .status-doing{background:linear-gradient(90deg,#ffb020,#ff8c00)}  
+    .status-done{background:linear-gradient(90deg,#27c36f,#139957)}  
+    .status-delay{background:linear-gradient(90deg,#ff5c70,#d92742)}  
+    .status-issue{background:linear-gradient(90deg,#a56eff,#7a46ff)}  
+  
+    .bar-progress{  
+      position:absolute;  
+      left:0;  
+      top:0;  
+      bottom:0;  
+      background:rgba(255,255,255,.22);  
+    }  
+  
+    .bar-label{  
+      position:absolute;  
+      inset:0;  
+      display:flex;  
+      align-items:center;  
+      justify-content:center;  
+      color:#fff;  
+      font-size:12px;  
+      font-weight:700;  
+      text-shadow:0 1px 2px rgba(0,0,0,.35);  
+      pointer-events:none;  
+    }  
+  
+    .resize-handle{  
+      position:absolute;  
+      top:0;  
+      width:10px;  
+      height:100%;  
+      cursor:ew-resize;  
+      z-index:5;  
+    }  
+    .resize-handle.left{left:0}  
+    .resize-handle.right{right:0}  
+  
+    .milestone{  
+      position:absolute;  
+      width:18px;  
+      height:18px;  
+      background:#dce7ff;  
+      transform:rotate(45deg);  
+      top:20px;  
+      box-shadow:0 0 12px rgba(220,231,255,.35);  
+      cursor:grab;  
+      z-index:5;  
+      touch-action:none;  
+    }  
+  
+    .row-title{  
+      display:flex;  
+      flex-direction:column;  
+      gap:2px;  
+    }  
+  
+    .row-sub{  
+      color:var(--sub);  
+      font-size:11px;  
+      font-weight:500;  
+    }  
+  
+    @media (max-width:1400px){  
+      .form-grid{grid-template-columns:repeat(5,1fr)}  
+      .filter-grid{grid-template-columns:repeat(3,1fr)}  
+    }  
+    @media (max-width:900px){  
+      .form-grid,.filter-grid{grid-template-columns:1fr}  
+      .status-inline{width:100%;margin-left:0}  
+      .hero h1{font-size:24px}  
+      .container{padding:12px}  
+    }  
+  </style>  
+</head>  
+<body>  
+  <div class="container">  
+    <section class="hero">  
+      <div class="hero-row">  
+        <div>  
+          <h1>🏭 Warehouse Ops Gantt</h1>  
+          <p>適用於倉庫與營運排程管理，支援作業區域、班別、負責人、優先級、狀態追蹤、拖拉排程與自動儲存。</p>  
+        </div>  
+        <div class="pill">📦 Ops Scheduling / HTML 單檔版</div>  
+      </div>  
+    </section>  
+  
+    <section class="section">  
+      <h2>➕ 新增作業任務</h2>  
+      <div class="form-grid">  
+        <div>  
+          <label>任務名稱</label>  
+          <input id="newTaskName" type="text" placeholder="例如：A區盤點" />  
+        </div>  
+        <div>  
+          <label>作業區域</label>  
+          <input id="newArea" type="text" placeholder="例如：Inbound / A區" />  
+        </div>  
+        <div>  
+          <label>負責人</label>  
+          <input id="newOwner" type="text" placeholder="例如：King Sun / Day Ops" />  
+        </div>  
+        <div>  
+          <label>班別</label>  
+          <select id="newShift">  
+            <option value="早班">早班</option>  
+            <option value="中班">中班</option>  
+            <option value="晚班">晚班</option>  
+            <option value="全天">全天</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>開始日期</label>  
+          <input id="newStart" type="date" />  
+        </div>  
+        <div>  
+          <label>結束日期</label>  
+          <input id="newEnd" type="date" />  
+        </div>  
+        <div>  
+          <label>進度 (%)</label>  
+          <input id="newProgress" type="number" min="0" max="100" value="0" />  
+        </div>  
+        <div>  
+          <label>狀態</label>  
+          <select id="newStatus">  
+            <option value="pending">待排程</option>  
+            <option value="doing">進行中</option>  
+            <option value="done">已完成</option>  
+            <option value="delay">延誤</option>  
+            <option value="issue">異常</option>  
+            <option value="milestone">里程碑</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>優先級</label>  
+          <select id="newPriority">  
+            <option value="high">高</option>  
+            <option value="medium">中</option>  
+            <option value="low">低</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>&nbsp;</label>  
+          <button class="btn-success" style="width:100%" onclick="addTask()">新增任務</button>  
+        </div>  
+      </div>  
+  
+      <div class="toolbar-row">  
+        <button class="btn-primary" onclick="renderAll()">重新整理</button>  
+        <button class="btn-warning" onclick="loadDemoData()">載入範例資料</button>  
+        <button class="btn-gray" onclick="exportTasks()">匯出 JSON</button>  
+        <button class="btn-purple" onclick="importTasks()">匯入 JSON</button>  
+        <button class="btn-danger" onclick="clearTasks()">清空全部任務</button>  
+        <div class="status-inline" id="saveStatus">💾 自動儲存已啟用</div>  
+      </div>  
+  
+      <div class="small-note">  
+        💡 日模式可直接拖曳任務條調整排程；拖左右邊緣可改開始/結束日；里程碑可直接移動。  
+      </div>  
+    </section>  
+  
+    <section class="section">  
+      <h2>🔎 篩選與檢視</h2>  
+      <div class="filter-grid">  
+        <div>  
+          <label>搜尋任務 / 區域 / 負責人</label>  
+          <input id="searchInput" type="text" placeholder="輸入關鍵字" oninput="renderAll()" />  
+        </div>  
+        <div>  
+          <label>狀態</label>  
+          <select id="statusFilter" onchange="renderAll()">  
+            <option value="">全部狀態</option>  
+            <option value="pending">待排程</option>  
+            <option value="doing">進行中</option>  
+            <option value="done">已完成</option>  
+            <option value="delay">延誤</option>  
+            <option value="issue">異常</option>  
+            <option value="milestone">里程碑</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>作業區域</label>  
+          <select id="areaFilter" onchange="renderAll()">  
+            <option value="">全部區域</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>負責人</label>  
+          <select id="ownerFilter" onchange="renderAll()">  
+            <option value="">全部負責人</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>班別</label>  
+          <select id="shiftFilter" onchange="renderAll()">  
+            <option value="">全部班別</option>  
+          </select>  
+        </div>  
+        <div>  
+          <label>優先級</label>  
+          <select id="priorityFilter" onchange="renderAll()">  
+            <option value="">全部優先級</option>  
+            <option value="high">高</option>  
+            <option value="medium">中</option>  
+            <option value="low">低</option>  
+          </select>  
+        </div>  
+      </div>  
+  
+      <div class="toolbar-row">  
+        <div>  
+          <label style="margin-bottom:8px;">時間尺度</label>  
+          <div class="chips">  
+            <div class="chip active" onclick="setScale('day', this)">日</div>  
+            <div class="chip" onclick="setScale('week', this)">週</div>  
+            <div class="chip" onclick="setScale('month', this)">月</div>  
+          </div>  
+        </div>  
+      </div>  
+  
+      <div class="summary" id="summaryBox"></div>  
+    </section>  
+  
+    <section class="section">  
+      <h2>🗂️ 營運任務資料表</h2>  
+      <div class="table-wrap">  
+        <table>  
+          <thead>  
+            <tr>  
+              <th>任務名稱</th>  
+              <th>區域</th>  
+              <th>負責人</th>  
+              <th>班別</th>  
+              <th>開始日期</th>  
+              <th>結束日期</th>  
+              <th>進度</th>  
+              <th>狀態</th>  
+              <th>優先級</th>  
+              <th>操作</th>  
+            </tr>  
+          </thead>  
+          <tbody id="taskTableBody"></tbody>  
+        </table>  
+      </div>  
+    </section>  
+  
+    <section class="section">  
+      <h2>📊 倉庫營運甘特圖</h2>  
+      <div id="ganttContainer" class="gantt-wrap"></div>  
+  
+      <div class="legend">  
+        <span><i class="dot pending"></i> 待排程</span>  
+        <span><i class="dot doing"></i> 進行中</span>  
+        <span><i class="dot done"></i> 已完成</span>  
+        <span><i class="dot delay"></i> 延誤</span>  
+        <span><i class="dot issue"></i> 異常</span>  
+        <span><i class="dot mile"></i> 里程碑</span>  
+      </div>  
+    </section>  
+  </div>  
+  
+  <script>  
+    const STORAGE_KEY = "warehouse_ops_gantt_v1";  
+    const CELL_DAY = 42;  
+    const CELL_WEEK = 70;  
+    const CELL_MONTH = 110;  
+  
+    let scaleMode = "day";  
+    let tasks = [];  
+    let dragState = null;  
+  
+    const demoTasks = [  
+      { id: 1, name: "Inbound 區到貨盤點", area: "Inbound", owner: "Day Ops", shift: "早班", start: "2026-07-03", end: "2026-07-05", progress: 100, status: "done", priority: "high" },  
+      { id: 2, name: "A區儲位整理", area: "A區", owner: "King Sun", shift: "早班", start: "2026-07-04", end: "2026-07-08", progress: 72, status: "doing", priority: "high" },  
+      { id: 3, name: "B區循環盤點", area: "B區", owner: "Night Shift", shift: "晚班", start: "2026-07-06", end: "2026-07-10", progress: 20, status: "pending", priority: "medium" },  
+      { id: 4, name: "出貨月台動線調整", area: "Outbound", owner: "Facility", shift: "全天", start: "2026-07-07", end: "2026-07-14", progress: 55, status: "doing", priority: "high" },  
+      { id: 5, name: "設備保養檢查", area: "MHE", owner: "Maintenance", shift: "中班", start: "2026-07-09", end: "2026-07-12", progress: 15, status: "delay", priority: "high" },  
+      { id: 6, name: "異常庫存複查", area: "QC", owner: "QA Team", shift: "早班", start: "2026-07-11", end: "2026-07-15", progress: 40, status: "issue", priority: "high" },  
+      { id: 7, name: "月度營運檢討", area: "SOC", owner: "Ops Lead", shift: "全天", start: "2026-07-18", end: "2026-07-18", progress: 0, status: "milestone", priority: "medium" }  
+    ];  
+  
+    function clamp(num, min, max) {  
+      return Math.max(min, Math.min(max, num));  
+    }  
+  
+    function parseDate(dateStr) {  
+      return new Date(dateStr + "T00:00:00");  
+    }  
+  
+    function formatDate(date) {  
+      const d = new Date(date);  
+      if (isNaN(d)) return "";  
+      const y = d.getFullYear();  
+      const m = String(d.getMonth() + 1).padStart(2, "0");  
+      const day = String(d.getDate()).padStart(2, "0");  
+      return `${y}-${m}-${day}`;  
+    }  
+  
+    function addDays(dateStr, days) {  
+      const d = parseDate(dateStr);  
+      d.setDate(d.getDate() + days);  
+      return formatDate(d);  
+    }  
+  
+    function diffDays(a, b) {  
+      const ms = 24 * 60 * 60 * 1000;  
+      return Math.round((parseDate(b) - parseDate(a)) / ms);  
+    }  
+  
+    function startOfWeek(dateStr) {  
+      const d = parseDate(dateStr);  
+      const day = d.getDay() || 7;  
+      d.setDate(d.getDate() - day + 1);  
+      return formatDate(d);  
+    }  
+  
+    function startOfMonth(dateStr) {  
+      const d = parseDate(dateStr);  
+      d.setDate(1);  
+      return formatDate(d);  
+    }  
+  
+    function addMonths(dateStr, months) {  
+      const d = parseDate(dateStr);  
+      d.setMonth(d.getMonth() + months);  
+      return formatDate(d);  
+    }  
+  
+    function weekDiff(a, b) {  
+      return Math.floor(diffDays(startOfWeek(a), startOfWeek(b)) / 7);  
+    }  
+  
+    function monthDiff(a, b) {  
+      const da = parseDate(a);  
+      const db = parseDate(b);  
+      return (db.getFullYear() - da.getFullYear()) * 12 + (db.getMonth() - da.getMonth());  
+    }  
+  
+    function escapeHtml(text) {  
+      return String(text)  
+        .replaceAll("&", "&amp;")  
+        .replaceAll("<", "&lt;")  
+        .replaceAll(">", "&gt;")  
+        .replaceAll('"', "&quot;")  
+        .replaceAll("'", "&#039;");  
+    }  
+  
+    function normalizeTask(item) {  
+      return {  
+        id: item.id || Date.now() + Math.random(),  
+        name: item.name || "",  
+        area: item.area || "",  
+        owner: item.owner || "",  
+        shift: item.shift || "全天",  
+        start: item.start || "",  
+        end: item.end || "",  
+        progress: clamp(Number(item.progress || 0), 0, 100),  
+        status: item.status || "pending",  
+        priority: item.priority || "medium"  
+      };  
+    }  
+  
+    function getStatusText(status) {  
+      return {  
+        pending: "待排程",  
+        doing: "進行中",  
+        done: "已完成",  
+        delay: "延誤",  
+        issue: "異常",  
+        milestone: "里程碑"  
+      }[status] || status;  
+    }  
+  
+    function getPriorityText(priority) {  
+      return {  
+        high: "高",  
+        medium: "中",  
+        low: "低"  
+      }[priority] || priority;  
+    }  
+  
+    function getPriorityClass(priority) {  
+      return {  
+        high: "p-high",  
+        medium: "p-medium",  
+        low: "p-low"  
+      }[priority] || "p-medium";  
+    }  
+  
+    function getStatusBadge(status) {  
+      const cls = {  
+        pending: "b-pending",  
+        doing: "b-doing",  
+        done: "b-done",  
+        delay: "b-delay",  
+        issue: "b-issue",  
+        milestone: "b-mile"  
+      }[status] || "b-pending";  
+      return `<span class="badge ${cls}">${getStatusText(status)}</span>`;  
+    }  
+  
+    function showSaveStatus(text) {  
+      const el = document.getElementById("saveStatus");  
+      if (el) el.textContent = text;  
+    }  
+  
+    function saveTasks() {  
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));  
+      showSaveStatus("✅ 已自動儲存");  
+      clearTimeout(saveTasks._timer);  
+      saveTasks._timer = setTimeout(() => {  
+        showSaveStatus("💾 自動儲存已啟用");  
+      }, 1200);  
+    }  
+  
+    function loadTasks() {  
+      try {  
+        const raw = localStorage.getItem(STORAGE_KEY);  
+        if (!raw) {  
+          tasks = [...demoTasks];  
+          saveTasks();  
+          return;  
+        }  
+        const data = JSON.parse(raw);  
+        if (Array.isArray(data) && data.length) {  
+          tasks = data.map(normalizeTask);  
+        } else {  
+          tasks = [...demoTasks];  
+          saveTasks();  
+        }  
+      } catch (e) {  
+        tasks = [...demoTasks];  
+      }  
+    }  
+  
+    function addTask() {  
+      const name = document.getElementById("newTaskName").value.trim();  
+      const area = document.getElementById("newArea").value.trim();  
+      const owner = document.getElementById("newOwner").value.trim();  
+      const shift = document.getElementById("newShift").value;  
+      const start = document.getElementById("newStart").value;  
+      const end = document.getElementById("newEnd").value;  
+      const progress = Number(document.getElementById("newProgress").value || 0);  
+      const status = document.getElementById("newStatus").value;  
+      const priority = document.getElementById("newPriority").value;  
+  
+      if (!name || !area || !owner || !start || !end) {  
+        alert("請完整填寫任務資料");  
+        return;  
+      }  
+  
+      if (parseDate(end) < parseDate(start)) {  
+        alert("結束日期不可早於開始日期");  
+        return;  
+      }  
+  
+      tasks.push({  
+        id: Date.now(),  
+        name, area, owner, shift, start, end,  
+        progress: clamp(progress, 0, 100),  
+        status, priority  
+      });  
+  
+      ["newTaskName","newArea","newOwner","newStart","newEnd"].forEach(id => {  
+        document.getElementById(id).value = "";  
+      });  
+      document.getElementById("newShift").value = "早班";  
+      document.getElementById("newProgress").value = 0;  
+      document.getElementById("newStatus").value = "pending";  
+      document.getElementById("newPriority").value = "high";  
+  
+      saveTasks();  
+      renderAll();  
+    }  
+  
+    function updateTask(id, field, value) {  
+      const task = tasks.find(t => t.id === id);  
+      if (!task) return;  
+  
+      if (field === "progress") {  
+        task[field] = clamp(Number(value || 0), 0, 100);  
+      } else {  
+        task[field] = value;  
+      }  
+  
+      if (task.start && task.end && parseDate(task.end) < parseDate(task.start)) {  
+        task.end = task.start;  
+      }  
+  
+      saveTasks();  
+      renderAll();  
+    }  
+  
+    function deleteTask(id) {  
+      tasks = tasks.filter(t => t.id !== id);  
+      saveTasks();  
+      renderAll();  
+    }  
+  
+    function clearTasks() {  
+      if (!confirm("確定要清空全部任務嗎？")) return;  
+      tasks = [];  
+      saveTasks();  
+      renderAll();  
+    }  
+  
+    function loadDemoData() {  
+      tasks = [...demoTasks];  
+      saveTasks();  
+      renderAll();  
+    }  
+  
+    function exportTasks() {  
+      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: "application/json;charset=utf-8" });  
+      const url = URL.createObjectURL(blob);  
+      const a = document.createElement("a");  
+      a.href = url;  
+      a.download = "warehouse_ops_gantt.json";  
+      a.click();  
+      URL.revokeObjectURL(url);  
+    }  
+  
+    function importTasks() {  
+      const input = document.createElement("input");  
+      input.type = "file";  
+      input.accept = ".json,application/json";  
+      input.onchange = e => {  
+        const file = e.target.files[0];  
+        if (!file) return;  
+        const reader = new FileReader();  
+        reader.onload = evt => {  
+          try {  
+            const data = JSON.parse(evt.target.result);  
+            if (!Array.isArray(data)) throw new Error("格式錯誤");  
+            tasks = data.map(normalizeTask);  
+            saveTasks();  
+            renderAll();  
+          } catch (err) {  
+            alert("JSON 匯入失敗，請確認格式");  
+          }  
+        };  
+        reader.readAsText(file, "utf-8");  
+      };  
+      input.click();  
+    }  
+  
+    function setScale(mode, el) {  
+      scaleMode = mode;  
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));  
+      el.classList.add("active");  
+      renderAll();  
+    }  
+  
+    function refreshFilterOptions() {  
+      const areas = [...new Set(tasks.map(t => t.area).filter(Boolean))].sort();  
+      const owners = [...new Set(tasks.map(t => t.owner).filter(Boolean))].sort();  
+      const shifts = [...new Set(tasks.map(t => t.shift).filter(Boolean))].sort();  
+  
+      const areaSel = document.getElementById("areaFilter");  
+      const ownerSel = document.getElementById("ownerFilter");  
+      const shiftSel = document.getElementById("shiftFilter");  
+  
+      const areaVal = areaSel.value;  
+      const ownerVal = ownerSel.value;  
+      const shiftVal = shiftSel.value;  
+  
+      areaSel.innerHTML = `<option value="">全部區域</option>` + areas.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");  
+      ownerSel.innerHTML = `<option value="">全部負責人</option>` + owners.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");  
+      shiftSel.innerHTML = `<option value="">全部班別</option>` + shifts.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");  
+  
+      areaSel.value = areas.includes(areaVal) ? areaVal : "";  
+      ownerSel.value = owners.includes(ownerVal) ? ownerVal : "";  
+      shiftSel.value = shifts.includes(shiftVal) ? shiftVal : "";  
+    }  
+  
+    function filteredTasks() {  
+      const kw = document.getElementById("searchInput").value.trim().toLowerCase();  
+      const status = document.getElementById("statusFilter").value;  
+      const area = document.getElementById("areaFilter").value;  
+      const owner = document.getElementById("ownerFilter").value;  
+      const shift = document.getElementById("shiftFilter").value;  
+      const priority = document.getElementById("priorityFilter").value;  
+  
+      return tasks.filter(t => {  
+        const matchedKw = !kw || [t.name, t.area, t.owner, t.shift].join(" ").toLowerCase().includes(kw);  
+        return matchedKw  
+          && (!status || t.status === status)  
+          && (!area || t.area === area)  
+          && (!owner || t.owner === owner)  
+          && (!shift || t.shift === shift)  
+          && (!priority || t.priority === priority);  
+      });  
+    }  
+  
+    function renderTaskTable() {  
+      const tbody = document.getElementById("taskTableBody");  
+      const rows = filteredTasks();  
+  
+      if (!rows.length) {  
+        tbody.innerHTML = `<tr><td colspan="10"><div class="empty">目前沒有符合條件的任務</div></td></tr>`;  
+        return;  
+      }  
+  
+      tbody.innerHTML = rows.map(task => `  
+        <tr>  
+          <td><input value="${escapeHtml(task.name)}" oninput="updateTask(${task.id}, 'name', this.value)" /></td>  
+          <td><input value="${escapeHtml(task.area)}" oninput="updateTask(${task.id}, 'area', this.value)" /></td>  
+          <td><input value="${escapeHtml(task.owner)}" oninput="updateTask(${task.id}, 'owner', this.value)" /></td>  
+          <td>  
+            <select onchange="updateTask(${task.id}, 'shift', this.value)">  
+              <option value="早班" ${task.shift==="早班"?"selected":""}>早班</option>  
+              <option value="中班" ${task.shift==="中班"?"selected":""}>中班</option>  
+              <option value="晚班" ${task.shift==="晚班"?"selected":""}>晚班</option>  
+              <option value="全天" ${task.shift==="全天"?"selected":""}>全天</option>  
+            </select>  
+          </td>  
+          <td><input type="date" value="${task.start}" onchange="updateTask(${task.id}, 'start', this.value)" /></td>  
+          <td><input type="date" value="${task.end}" onchange="updateTask(${task.id}, 'end', this.value)" /></td>  
+          <td><input type="number" min="0" max="100" value="${task.progress}" oninput="updateTask(${task.id}, 'progress', this.value)" /></td>  
+          <td>  
+            <select onchange="updateTask(${task.id}, 'status', this.value)">  
+              <option value="pending" ${task.status==="pending"?"selected":""}>待排程</option>  
+              <option value="doing" ${task.status==="doing"?"selected":""}>進行中</option>  
+              <option value="done" ${task.status==="done"?"selected":""}>已完成</option>  
+              <option value="delay" ${task.status==="delay"?"selected":""}>延誤</option>  
+              <option value="issue" ${task.status==="issue"?"selected":""}>異常</option>  
+              <option value="milestone" ${task.status==="milestone"?"selected":""}>里程碑</option>  
+            </select>  
+          </td>  
+          <td>  
+            <select onchange="updateTask(${task.id}, 'priority', this.value)">  
+              <option value="high" ${task.priority==="high"?"selected":""}>高</option>  
+              <option value="medium" ${task.priority==="medium"?"selected":""}>中</option>  
+              <option value="low" ${task.priority==="low"?"selected":""}>低</option>  
+            </select>  
+          </td>  
+          <td><button class="btn-danger" onclick="deleteTask(${task.id})">刪除</button></td>  
+        </tr>  
+      `).join("");  
+    }  
+  
+    function getBounds(rows) {  
+      if (!rows.length) return null;  
+  
+      let minDate = rows[0].start;  
+      let maxDate = rows[0].end;  
+  
+      rows.forEach(t => {  
+        if (parseDate(t.start) < parseDate(minDate)) minDate = t.start;  
+        if (parseDate(t.end) > parseDate(maxDate)) maxDate = t.end;  
+      });  
+  
+      if (scaleMode === "day") {  
+        minDate = addDays(minDate, -2);  
+        maxDate = addDays(maxDate, 2);  
+      } else if (scaleMode === "week") {  
+        minDate = startOfWeek(addDays(minDate, -7));  
+        maxDate = addDays(startOfWeek(maxDate), 13);  
+      } else {  
+        minDate = startOfMonth(addMonths(minDate, -1));  
+        maxDate = addMonths(startOfMonth(maxDate), 1);  
+      }  
+  
+      return { minDate, maxDate };  
+    }  
+  
+    function getScaleConfig(bounds) {  
+      if (scaleMode === "day") {  
+        const total = diffDays(bounds.minDate, bounds.maxDate) + 1;  
+        const labels = Array.from({ length: total }, (_, i) => addDays(bounds.minDate, i));  
+        return {  
+          cellWidth: CELL_DAY,  
+          total,  
+          labels,  
+          labelText: d => {  
+            const x = parseDate(d);  
+            return `${x.getMonth() + 1}/${x.getDate()}`;  
+          },  
+          offset: d => diffDays(bounds.minDate, d),  
+          span: (s, e) => diffDays(s, e) + 1  
+        };  
+      }  
+  
+      if (scaleMode === "week") {  
+        const start = startOfWeek(bounds.minDate);  
+        const total = weekDiff(start, bounds.maxDate) + 1;  
+        const labels = Array.from({ length: total }, (_, i) => addDays(start, i * 7));  
+        return {  
+          cellWidth: CELL_WEEK,  
+          total,  
+          labels,  
+          labelText: d => {  
+            const x = parseDate(d);  
+            return `W ${x.getMonth()+1}/${x.getDate()}`;  
+          },  
+          offset: d => weekDiff(start, d),  
+          span: (s, e) => Math.max(1, weekDiff(startOfWeek(s), e) - weekDiff(startOfWeek(s), s) + 1)  
+        };  
+      }  
+  
+      const start = startOfMonth(bounds.minDate);  
+      const total = monthDiff(start, bounds.maxDate) + 1;  
+      const labels = Array.from({ length: total }, (_, i) => addMonths(start, i));  
+      return {  
+        cellWidth: CELL_MONTH,  
+        total,  
+        labels,  
+        labelText: d => {  
+          const x = parseDate(d);  
+          return `${x.getFullYear()}/${String(x.getMonth() + 1).padStart(2, "0")}`;  
+        },  
+        offset: d => monthDiff(start, d),  
+        span: (s, e) => Math.max(1, monthDiff(startOfMonth(s), e) - monthDiff(startOfMonth(s), s) + 1)  
+      };  
+    }  
+  
+    function renderGantt() {  
+      const container = document.getElementById("ganttContainer");  
+      const rows = filteredTasks();  
+  
+      if (!rows.length) {  
+        container.innerHTML = `<div class="empty" style="margin:12px;">目前沒有符合條件的任務</div>`;  
+        return;  
+      }  
+  
+      const bounds = getBounds(rows);  
+      const scale = getScaleConfig(bounds);  
+      document.documentElement.style.setProperty("--cell-width", scale.cellWidth + "px");  
+  
+      const gridTemplate = `var(--task-col) var(--area-col) var(--owner-col) var(--shift-col) repeat(${scale.total}, var(--cell-width))`;  
+      const today = formatDate(new Date());  
+  
+      let html = `<div class="gantt">`;  
+  
+      html += `<div class="gantt-header" style="grid-template-columns:${gridTemplate}">`;  
+      html += `<div class="gantt-cell sticky-left">任務名稱</div>`;  
+      html += `<div class="gantt-cell sticky-left area">區域</div>`;  
+      html += `<div class="gantt-cell sticky-left owner">負責人</div>`;  
+      html += `<div class="gantt-cell sticky-left shift">班別</div>`;  
+      scale.labels.forEach(label => {  
+        html += `<div class="gantt-cell">${scale.labelText(label)}</div>`;  
+      });  
+      html += `</div>`;  
+  
+      rows.forEach(task => {  
+        const startOffset = scale.offset(task.start);  
+        const duration = Math.max(1, scale.span(task.start, task.end));  
+  
+        html += `<div class="gantt-row" style="grid-template-columns:${gridTemplate}">`;  
+        html += `<div class="gantt-cell sticky-left"><div class="row-title"><div>${escapeHtml(task.name)}</div><div class="row-sub ${getPriorityClass(task.priority)}">優先級：${getPriorityText(task.priority)}</div></div></div>`;  
+        html += `<div class="gantt-cell sticky-left area">${escapeHtml(task.area)}</div>`;  
+        html += `<div class="gantt-cell sticky-left owner">${escapeHtml(task.owner)}</div>`;  
+        html += `<div class="gantt-cell sticky-left shift">${escapeHtml(task.shift)}</div>`;  
+        scale.labels.forEach(() => { html += `<div class="gantt-cell"></div>`; });  
+  
+        html += `<div class="timeline-row">`;  
+  
+        const todayOffset = scale.offset(today);  
+        if (todayOffset >= 0 && todayOffset < scale.total) {  
+          html += `<div class="today-line" style="left:${todayOffset * scale.cellWidth + scale.cellWidth / 2}px;"></div>`;  
+        }  
+  
+        if (task.status === "milestone") {  
+          const left = startOffset * scale.cellWidth + scale.cellWidth / 2 - 9;  
+          html += `<div class="milestone drag-milestone" data-id="${task.id}" style="left:${left}px" title="${escapeHtml(task.name)}"></div>`;  
+        } else {  
+          const left = startOffset * scale.cellWidth + 2;  
+          const width = duration * scale.cellWidth - 4;  
+          html += `  
+            <div class="bar-track status-${task.status} drag-bar" data-id="${task.id}" style="left:${left}px;width:${width}px;">  
+              <div class="resize-handle left" data-id="${task.id}" data-side="left"></div>  
+              <div class="bar-progress" style="width:${clamp(task.progress,0,100)}%"></div>  
+              <div class="bar-label">${getStatusText(task.status)} · ${clamp(task.progress,0,100)}%</div>  
+              <div class="resize-handle right" data-id="${task.id}" data-side="right"></div>  
+            </div>  
+          `;  
+        }  
+  
+        html += `</div></div>`;  
+      });  
+  
+      html += `</div>`;  
+      container.innerHTML = html;  
+      bindDragEvents();  
+    }  
+  
+    function bindDragEvents() {  
+      if (scaleMode !== "day") return;  
+  
+      document.querySelectorAll(".drag-bar").forEach(el => {  
+        el.addEventListener("pointerdown", startBarDrag);  
+      });  
+  
+      document.querySelectorAll(".resize-handle").forEach(el => {  
+        el.addEventListener("pointerdown", startResizeDrag);  
+      });  
+  
+      document.querySelectorAll(".drag-milestone").forEach(el => {  
+        el.addEventListener("pointerdown", startMilestoneDrag);  
+      });  
+    }  
+  
+    function startBarDrag(e) {  
+      if (e.target.classList.contains("resize-handle")) return;  
+      const id = Number(e.currentTarget.dataset.id);  
+      const task = tasks.find(t => t.id === id);  
+      if (!task) return;  
+  
+      e.preventDefault();  
+      e.currentTarget.setPointerCapture(e.pointerId);  
+      e.currentTarget.classList.add("dragging");  
+  
+      dragState = {  
+        type: "move",  
+        id,  
+        startX: e.clientX,  
+        originalStart: task.start,  
+        originalEnd: task.end  
+      };  
+  
+      window.addEventListener("pointermove", onPointerMove);  
+      window.addEventListener("pointerup", onPointerUp);  
+    }  
+  
+    function startResizeDrag(e) {  
+      e.stopPropagation();  
+      const id = Number(e.currentTarget.dataset.id);  
+      const side = e.currentTarget.dataset.side;  
+      const task = tasks.find(t => t.id === id);  
+      if (!task) return;  
+  
+      const bar = e.currentTarget.parentElement;  
+      e.preventDefault();  
+      bar.setPointerCapture(e.pointerId);  
+      bar.classList.add("dragging");  
+  
+      dragState = {  
+        type: "resize",  
+        side,  
+        id,  
+        startX: e.clientX,  
+        originalStart: task.start,  
+        originalEnd: task.end  
+      };  
+  
+      window.addEventListener("pointermove", onPointerMove);  
+      window.addEventListener("pointerup", onPointerUp);  
+    }  
+  
+    function startMilestoneDrag(e) {  
+      const id = Number(e.currentTarget.dataset.id);  
+      const task = tasks.find(t => t.id === id);  
+      if (!task) return;  
+  
+      e.preventDefault();  
+      e.currentTarget.setPointerCapture(e.pointerId);  
+      e.currentTarget.classList.add("dragging");  
+  
+      dragState = {  
+        type: "milestone",  
+        id,  
+        startX: e.clientX,  
+        originalStart: task.start  
+      };  
+  
+      window.addEventListener("pointermove", onPointerMove);  
+      window.addEventListener("pointerup", onPointerUp);  
+    }  
+  
+    function onPointerMove(e) {  
+      if (!dragState) return;  
+  
+      const deltaX = e.clientX - dragState.startX;  
+      const deltaDays = Math.round(deltaX / CELL_DAY);  
+      const task = tasks.find(t => t.id === dragState.id);  
+      if (!task) return;  
+  
+      if (dragState.type === "move") {  
+        task.start = addDays(dragState.originalStart, deltaDays);  
+        task.end = addDays(dragState.originalEnd, deltaDays);  
+      }  
+  
+      if (dragState.type === "resize") {  
+        if (dragState.side === "left") {  
+          const newStart = addDays(dragState.originalStart, deltaDays);  
+          if (parseDate(newStart) <= parseDate(task.end || dragState.originalEnd)) {  
+            task.start = newStart;  
+          }  
+        }  
+        if (dragState.side === "right") {  
+          const newEnd = addDays(dragState.originalEnd, deltaDays);  
+          if (parseDate(newEnd) >= parseDate(task.start || dragState.originalStart)) {  
+            task.end = newEnd;  
+          }  
+        }  
+      }  
+  
+      if (dragState.type === "milestone") {  
+        const newDate = addDays(dragState.originalStart, deltaDays);  
+        task.start = newDate;  
+        task.end = newDate;  
+      }  
+  
+      renderTaskTable();  
+      renderGantt();  
+      renderSummary();  
+    }  
+  
+    function onPointerUp() {  
+      document.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));  
+      dragState = null;  
+      saveTasks();  
+      renderAll();  
+      window.removeEventListener("pointermove", onPointerMove);  
+      window.removeEventListener("pointerup", onPointerUp);  
+    }  
+  
+    function renderSummary() {  
+      const rows = filteredTasks();  
+      const total = rows.length;  
+      const pending = rows.filter(t => t.status === "pending").length;  
+      const doing = rows.filter(t => t.status === "doing").length;  
+      const done = rows.filter(t => t.status === "done").length;  
+      const delay = rows.filter(t => t.status === "delay").length;  
+      const issue = rows.filter(t => t.status === "issue").length;  
+      const mile = rows.filter(t => t.status === "milestone").length;  
+      const avg = total ? Math.round(rows.reduce((sum, t) => sum + Number(t.progress || 0), 0) / total) : 0;  
+  
+      document.getElementById("summaryBox").innerHTML = `  
+        <div class="box">目前任務：${total}</div>  
+        <div class="box">待排程：${pending}</div>  
+        <div class="box">進行中：${doing}</div>  
+        <div class="box">已完成：${done}</div>  
+        <div class="box">延誤：${delay}</div>  
+        <div class="box">異常：${issue}</div>  
+        <div class="box">里程碑：${mile}</div>  
+        <div class="box">平均進度：${avg}%</div>  
+        <div class="box">檢視模式：${scaleMode === "day" ? "日" : scaleMode === "week" ? "週" : "月"}</div>  
+      `;  
+    }  
+  
+    function renderAll() {  
+      tasks = tasks.map(normalizeTask);  
+      refreshFilterOptions();  
+      renderTaskTable();  
+      renderGantt();  
+      renderSummary();  
+    }  
+  
+    loadTasks();  
+    renderAll();  
+  </script>  
+</body>  
+</html>
